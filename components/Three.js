@@ -5,10 +5,8 @@ import raf from 'raf'
 import * as THREE from 'three'
 import { binder } from '../lib/_utils'
 const OrbitControls = require('three-orbit-controls')(THREE)
-// import { Shaders, GLSL } from 'gl-react'
 // const vertexShader = require('./shaders/vertex.glsl')
 // const fragmentShader = require('./shaders/fragment.glsl')
-// const THREE = require('three')
 
 class Three extends Component {
   constructor (props) {
@@ -43,8 +41,6 @@ class Three extends Component {
       this.init()
       this.renderThree()
       if (!this.state.inited) { this.forceUpdate() }
-    } else {
-      // console.log(this, this.varsNeedUpdate(), !this.props.server);
     }
   }
 
@@ -61,7 +57,8 @@ class Three extends Component {
       this.camera = new THREE.PerspectiveCamera(70, w / h, 0.01, 50)
     }
 
-    this.camera.position.z = 4
+    this.camera.position.z = 30
+    // this.camera.position.z = 55
 
     const controls = new OrbitControls(this.camera, this.renderer.domElement)
     controls.enableDamping = true
@@ -88,7 +85,6 @@ class Three extends Component {
 
     const tryToMount = () => {
       if (this.mount !== undefined) {
-        // console.log('mounting renderer domElement')
         this.mount.appendChild(this.renderer.domElement)
         this.setState({ mounted: true })
       } else {
@@ -100,36 +96,6 @@ class Three extends Component {
   }
 
   setupPost () {
-    // const shaders = Shaders.create({
-    //   postVert: {
-    //     frag: GLSL`
-    //       varying vec2 vUv;
-    //       void main() {
-    //         vUv = uv;
-    //         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    //       }`
-    //   },
-    //   postFrag: {
-    //     frag: GLSL`
-    //     #include <packing>
-    //     varying vec2 vUv;
-    //     uniform sampler2D tDiffuse;
-    //     uniform sampler2D tDepth;
-    //     uniform float cameraNear;
-    //     uniform float cameraFar;
-    //     float readDepth( sampler2D depthSampler, vec2 coord ) {
-    //       float fragCoordZ = texture2D( depthSampler, coord ).x;
-    //       float viewZ = perspectiveDepthToViewZ( fragCoordZ, cameraNear, cameraFar );
-    //       return viewZToOrthographicDepth( viewZ, cameraNear, cameraFar );
-    //     }
-    //     void main() {
-    //       //vec3 diffuse = texture2D( tDiffuse, vUv ).rgb;
-    //       float depth = readDepth( tDepth, vUv );
-    //       gl_FragColor.rgb = 1.0 - vec3( depth );
-    //       gl_FragColor.a = 1.0;
-    //     }`
-    //   }
-    // })
     this.postCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
     const postMaterial = new THREE.ShaderMaterial({
       // vertexShader,
@@ -153,7 +119,7 @@ class Three extends Component {
           return viewZToOrthographicDepth( viewZ, cameraNear, cameraFar );
         }
         void main() {
-          //vec3 diffuse = texture2D( tDiffuse, vUv ).rgb;
+          vec3 diffuse = texture2D( tDiffuse, vUv ).rgb;
           float depth = readDepth( tDepth, vUv );
           gl_FragColor.rgb = 1.0 - vec3( depth );
           gl_FragColor.a = 1.0;
@@ -165,18 +131,18 @@ class Three extends Component {
         tDepth: { value: this.target.depthTexture }
       }
     })
-    // console.log(shaders);
-    // console.log(postMaterial)
     const postPlane = new THREE.PlaneBufferGeometry(2, 2)
     const postQuad = new THREE.Mesh(postPlane, postMaterial)
     this.postScene = new THREE.Scene()
     this.postScene.add(postQuad)
+    this.postScene.background = new THREE.Color(0xe50000)
   }
 
   setupScene () {
+    const { w, h } = this.props
     const geometry = new THREE.TorusBufferGeometry(1, 0.3, 128, 64)
     const material = new THREE.MeshBasicMaterial({ color: 'red' })
-    const count = 50
+    const count = 1000
     const scale = 5
 
     for (var i = 0; i < count; i++) {
@@ -184,14 +150,22 @@ class Three extends Component {
       const z = (Math.random() * 2.0) - 1.0
       const zScale = Math.sqrt(1.0 - z * z) * scale
 
+      const x = Math.cos(r) * zScale * Math.random() * (w / 100)
+      const y = Math.sin(r) * zScale * Math.random() * (h / 100)
+
+      const oldX = Math.cos(r) * zScale
+      const oldY = Math.sin(r) * zScale
+
       const mesh = new THREE.Mesh(geometry, material)
       mesh.position.set(
-        Math.cos(r) * zScale,
-        Math.sin(r) * zScale,
+        x,
+        y,
         z * scale
       )
+      console.log({ r, z, zScale, x, y, oldX, oldY })
       mesh.rotation.set(Math.random(), Math.random(), Math.random())
       this.scene.add(mesh)
+      this.scene.background = new THREE.Color(0xff0000)
     }
   }
 

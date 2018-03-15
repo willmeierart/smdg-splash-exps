@@ -17,7 +17,17 @@ export default class HomePage extends Component {
   }
   getDims () {
     if (typeof window !== 'undefined') {
-      this.setState({ width: window.innerWidth, height: window.innerHeight, server: false })
+      this.setState({
+        width:
+          window.innerWidth % 2 === 0
+            ? window.innerWidth
+            : window.innerWidth + 1,
+        height:
+          window.innerHeight % 2 === 0
+            ? window.innerHeight
+            : window.innerHeight + 1,
+        server: false
+      })
       window.addEventListener('resize', () => { this.getDims() })
       // return { width: window.innerWidth, height: window.innerHeight }
     } else {
