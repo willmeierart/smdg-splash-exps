@@ -1,7 +1,5 @@
 const path = require('path')
 const glob = require('glob')
-const webpack = require('webpack')
-const { parsed: localEnv } = require('dotenv').config()
 
 module.exports = {
   webpack: (config, { dev }) => {
@@ -46,9 +44,6 @@ module.exports = {
         test: /\.glsl$/,
         loader: 'webpack-glsl-loader'
       }
-    )
-    config.plugins.push(
-      new webpack.EnvironmentPlugin(localEnv)
     )
     // config.node = { fs: 'empty' }
     return config
