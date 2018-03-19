@@ -1,8 +1,6 @@
 // main wrapper component - layout, universal styles, etc.
 import React, { Component } from 'react'
-// import axios from 'axios'
 import Head from '../components/Head'
-// require('dotenv').config()
 
 // import globalStyles from '../../styles/index.scss'
 

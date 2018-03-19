@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import App from '../containers/App'
-import Canvas from '../components/Canvas'
-import Three from '../components/Three'
+import Canvas from '../components/canvas/Canvas'
+import Three from '../components/three/Three'
 import { binder } from '../lib/_utils'
 
 export default class HomePage extends Component {

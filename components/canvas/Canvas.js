@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import DOM from 'react-dom'
 import PropTypes from 'prop-types'
 import raf from 'raf'
-import { binder } from '../lib/_utils'
+import { binder } from '../../lib/_utils'
 
 class Canvas extends Component {
   constructor (props) {

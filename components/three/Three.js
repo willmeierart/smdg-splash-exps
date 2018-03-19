@@ -3,7 +3,7 @@ import DOM from 'react-dom'
 import PropTypes from 'prop-types'
 import raf from 'raf'
 import * as THREE from 'three'
-import { binder } from '../lib/_utils'
+import { binder } from '../../lib/_utils'
 const OrbitControls = require('three-orbit-controls')(THREE)
 // const vertexShader = require('./shaders/vertex.glsl')
 // const fragmentShader = require('./shaders/fragment.glsl')
@@ -11,14 +11,16 @@ const OrbitControls = require('three-orbit-controls')(THREE)
 class Three extends Component {
   constructor (props) {
     super(props)
-    this.state = { supportsExtension: true, inited: false, mounted: false }
-    binder(this, ['renderThree', 'init', 'setupScene', 'setupPost', 'onWindowResize', 'varsNeedUpdate'])
-    const initialVars = ['renderer', 'camera', 'scene', 'target', 'postScene', 'postCamera']
+    this.state = { supportsExtension: true, inited: false, mounted: false, incrementWheel: false, wheelIncrement: 100, opacity: 1 }
+    binder(this, ['renderThree', 'init', 'setupScene', 'setupPost', 'onWindowResize', 'varsNeedUpdate', 'handleWheel', 'manipulateControls', 'start', 'stop'])
+    const initialVars = ['renderer', 'camera', 'scene', 'target', 'postScene', 'postCamera', 'controls']
     initialVars.forEach(v => { this[v] = null })
   }
 
-  shouldComponentUpdate (prevProps, prevState) {
-    if (this.state.inited !== prevState.inited || this.props.server !== prevProps.server) {
+  shouldComponentUpdate (nextProps, nextState) {
+    if (this.state.inited !== nextState.inited ||
+      this.state.opacity !== nextState.opacity ||
+      this.props.server !== nextProps.server) {
       return true
     }
     return false
@@ -26,6 +28,63 @@ class Three extends Component {
 
   componentDidMount () { this.setupThree() }
   componentDidUpdate () { this.setupThree() }
+  componentWillUnmount () { this.stop() }
+
+  handleWheel (e) {
+    if (e.target.object !== undefined) {
+      console.log(e.target.object)
+      this.manipulateControls(e)
+    } else {
+      // console.log(e.wheelDelta) // works all the time
+      if (this.state.incrementWheel) {
+        this.setState({
+          wheelIncrement: e.wheelDelta,
+          opacity: this.state.opacity -= e.wheelDelta / 1000
+        })
+        console.log(this.state.opacity)
+        this.forceUpdate()
+      }
+    }
+  }
+
+  manipulateControls (e) {
+    const camera = e.target.object
+    const { z } = camera.position
+    const rotY = camera.rotation._y
+    // if controls position z is less than a certain amount (up to wall)
+    // then switch mousebutton 0 to 'rotate' then if rotate hits 90
+    // ... prob have to change some stuff to negative vals, etc
+    // switch mousebutton 0 to pan then when pan pans left a certain amount ...
+    console.log(z)
+    console.log(rotY)
+    console.log(90 * Math.PI / 180)
+
+    if (Math.abs(z) <= 7) {
+      console.log('in wall')
+      // console.log(e.wheelDelta);
+      this.controls.mouseButtons = {
+        ORBIT: THREE.MOUSE.MIDDLE,
+        PAN: THREE.MOUSE.RIGHT,
+        ZOOM: THREE.MOUSE.LEFT
+      }
+      this.controls.autoRotate = true
+      this.controls.autoRotateSpeed = 20
+      if (rotY <= -1.5) {
+        this.controls.autoRotate = false
+        camera.up.y += 1
+        this.setState({ incrementWheel: true })
+        console.log('state wheel inc', this.state.wheelIncrement)
+      }
+    } else {
+      this.controls.mouseButtons = {
+        ORBIT: THREE.MOUSE.LEFT,
+        PAN: THREE.MOUSE.RIGHT,
+        ZOOM: THREE.MOUSE.MIDDLE
+      }
+      // e.target.object.rotation = 0
+      this.controls.autoRotate = false
+    }
+  }
 
   varsNeedUpdate () {
     return this.renderer === null ||
@@ -57,13 +116,19 @@ class Three extends Component {
       this.camera = new THREE.PerspectiveCamera(70, w / h, 0.01, 50)
     }
 
-    this.camera.position.z = 30
-    // this.camera.position.z = 55
+    // this.camera.position.z = 30
+    this.camera.position.z = 55
 
-    const controls = new OrbitControls(this.camera, this.renderer.domElement)
-    controls.enableDamping = true
-    controls.dampingFactor = 0.35
-    controls.rotateSpeed = 0.35
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement)
+    this.controls.enableDamping = true
+    this.controls.dampingFactor = 0.8
+    this.controls.rotateSpeed = 0.35
+    this.controls.maxZoom = 55
+    this.controls.zoomSpeed = 1
+    this.controls.minDistance = 7
+    this.controls.addEventListener('change', this.handleWheel)
+
+    console.log(this.controls)
 
     this.target = new THREE.WebGLRenderTarget(w, h)
     this.target.texture.format = THREE.RGBFormat
@@ -77,7 +142,6 @@ class Three extends Component {
 
     this.scene = new THREE.Scene()
     this.setupScene()
-
     this.setupPost()
 
     this.onWindowResize()
@@ -87,6 +151,7 @@ class Three extends Component {
       if (this.mount !== undefined) {
         this.mount.appendChild(this.renderer.domElement)
         this.setState({ mounted: true })
+        this.renderer.domElement.addEventListener('wheel', this.handleWheel)
       } else {
         setTimeout(() => { tryToMount() }, 200)
       }
@@ -113,6 +178,7 @@ class Three extends Component {
         uniform sampler2D tDepth;
         uniform float cameraNear;
         uniform float cameraFar;
+        uniform vec3 baseColor;
         float readDepth( sampler2D depthSampler, vec2 coord ) {
           float fragCoordZ = texture2D( depthSampler, coord ).x;
           float viewZ = perspectiveDepthToViewZ( fragCoordZ, cameraNear, cameraFar );
@@ -121,28 +187,50 @@ class Three extends Component {
         void main() {
           vec3 diffuse = texture2D( tDiffuse, vUv ).rgb;
           float depth = readDepth( tDepth, vUv );
-          gl_FragColor.rgb = 1.0 - vec3( depth );
+          // gl_FragColor.rgb = vec3( depth );
+          gl_FragColor.rgb = baseColor * vec3( depth );
           gl_FragColor.a = 1.0;
+          // gl_FragColor.r = 0.9;
+          // gl_FragColor = vec4( vec3( vUv, 0. ), 1. );
+          // gl_FragColor = vec4(gl_FragCoord.z);
         }`,
       uniforms: {
         cameraNear: { value: this.camera.near },
         cameraFar: { value: this.camera.far },
         tDiffuse: { value: this.target.texture },
-        tDepth: { value: this.target.depthTexture }
+        tDepth: { value: this.target.depthTexture },
+        baseColor: { value: new THREE.Color(0xff0000) }
       }
     })
+
+    postMaterial.fog = true
+    const fog = new THREE.Fog(0xff0000)
+    console.log(postMaterial)
+
     const postPlane = new THREE.PlaneBufferGeometry(2, 2)
     const postQuad = new THREE.Mesh(postPlane, postMaterial)
     this.postScene = new THREE.Scene()
     this.postScene.add(postQuad)
-    this.postScene.background = new THREE.Color(0xe50000)
+    // this.postScene.background = new THREE.Color(0xe50000)
   }
 
   setupScene () {
     const { w, h } = this.props
     const geometry = new THREE.TorusBufferGeometry(1, 0.3, 128, 64)
-    const material = new THREE.MeshBasicMaterial({ color: 'red' })
-    const count = 1000
+    const material = new THREE.MeshBasicMaterial({
+      color: 0xff0000,
+      transparent: true,
+      opacity: 0.4,
+      vertexColors: THREE.NoColors
+    })
+    // material.color = new THREE.Color(0xff0000)
+
+    console.log(material)
+    // material.vertexColors = 0xff0000
+
+    const fog = new THREE.Fog(0xff0000, 0, 500)
+
+    const count = 2000
     const scale = 5
 
     for (var i = 0; i < count; i++) {
@@ -150,11 +238,8 @@ class Three extends Component {
       const z = (Math.random() * 2.0) - 1.0
       const zScale = Math.sqrt(1.0 - z * z) * scale
 
-      const x = Math.cos(r) * zScale * Math.random() * (w / 100)
-      const y = Math.sin(r) * zScale * Math.random() * (h / 100)
-
-      const oldX = Math.cos(r) * zScale
-      const oldY = Math.sin(r) * zScale
+      const x = Math.cos(r) * zScale * Math.random() * (w / 50)
+      const y = Math.sin(r) * zScale * Math.random() * (h / 50)
 
       const mesh = new THREE.Mesh(geometry, material)
       mesh.position.set(
@@ -162,10 +247,13 @@ class Three extends Component {
         y,
         z * scale
       )
-      console.log({ r, z, zScale, x, y, oldX, oldY })
+      // const oldX = Math.cos(r) * zScale
+      // const oldY = Math.sin(r) * zScale
+      // console.log({ r, z, zScale, x, y, oldX, oldY })
       mesh.rotation.set(Math.random(), Math.random(), Math.random())
       this.scene.add(mesh)
-      this.scene.background = new THREE.Color(0xff0000)
+      this.scene.fog = fog
+      this.scene.background = new THREE.Color(0xe50000)
     }
   }
 
@@ -183,27 +271,26 @@ class Three extends Component {
   }
 
   renderThree () {
-    // console.log('this.camera instanceof THREE.Camera: ', this.camera instanceof THREE.Camera)
-    // console.log('this.postCamera instanceof THREE.Camera: ', this.postCamera instanceof THREE.Camera)
-    // console.log('three.camera.isCamera: ', this.camera.isCamera)
-    // console.log('three.postCamera.isCamera: ', this.postCamera.isCamera)
     if (!this.state.supportsExtension) return <div />
 
     if (!this.varsNeedUpdate()) {
-      raf(this.renderThree)
-      // setTimeout(() => { this.renderThree() }, 2000)
+      this.start()
       this.renderer.render(this.scene, this.camera, this.target)
-      this.renderer.render(this.postScene, this.postCamera) // THIS IS THE PROBLEM LINE
+      this.renderer.render(this.postScene, this.postCamera)
     }
   }
+
+  start () { if (!this.frameId) { raf(this.renderThree) } }
+  stop () { raf.cancel(this.frameId) }
 
   render () {
     const { w, h } = this.props
     return (
-      <div>
-        { this.state.supportsExtension && this.camera instanceof THREE.Camera
+      <div >
+        { this.state.supportsExtension
           ? <div>
-            <div style={{ width: w, height: h }} ref={ref => { this.mount = ref }} />
+            <div /* onWheel={this.handleWheel} */ style={{ width: w, height: h, filter: 'blur(0)', opacity: this.state.opacity }}
+              ref={ref => { this.mount = ref }} />
             {/* ? <canvas width={w} height={h} ref={ref => { this.canvas = ref }} /> */}
           </div>
           : <div>oh no! something went wrong...</div>
