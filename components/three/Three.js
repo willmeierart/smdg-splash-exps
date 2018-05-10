@@ -5,6 +5,8 @@ import raf from 'raf'
 import * as THREE from 'three'
 import { binder } from '../../lib/_utils'
 const OrbitControls = require('three-orbit-controls')(THREE)
+const OBJLoader = require('three-obj-loader')
+OBJLoader(THREE)
 // const vertexShader = require('./shaders/vertex.glsl')
 // const fragmentShader = require('./shaders/fragment.glsl')
 
@@ -12,7 +14,7 @@ class Three extends Component {
   constructor (props) {
     super(props)
     this.state = { supportsExtension: true, inited: false, mounted: false, incrementWheel: false, wheelIncrement: 100, opacity: 1 }
-    binder(this, ['renderThree', 'init', 'setupScene', 'setupPost', 'onWindowResize', 'varsNeedUpdate', 'handleWheel', 'manipulateControls', 'start', 'stop'])
+    binder(this, ['renderThree', 'init', 'setupScene', 'setupPost', 'onWindowResize', 'varsNeedUpdate', 'handleWheel', 'manipulateControls', 'start', 'stop', 'rotateToruses'])
     const initialVars = ['renderer', 'camera', 'scene', 'target', 'postScene', 'postCamera', 'controls']
     initialVars.forEach(v => { this[v] = null })
   }
@@ -98,7 +100,7 @@ class Three extends Component {
   setupThree () {
     if (!this.props.server && this.varsNeedUpdate()) {
       this.init()
-      this.renderThree()
+      this.renderThree(true)
       if (!this.state.inited) { this.forceUpdate() }
     }
   }
@@ -204,7 +206,7 @@ class Three extends Component {
     })
 
     postMaterial.fog = true
-    const fog = new THREE.Fog(0xff0000)
+    // const fog = new THREE.Fog(0xff0000)
     console.log(postMaterial)
 
     const postPlane = new THREE.PlaneBufferGeometry(2, 2)
@@ -214,7 +216,7 @@ class Three extends Component {
     // this.postScene.background = new THREE.Color(0xe50000)
   }
 
-  setupScene () {
+  setupScene (blender) {
     const { w, h } = this.props
     const geometry = new THREE.TorusBufferGeometry(1, 0.3, 128, 64)
     const material = new THREE.MeshBasicMaterial({
@@ -223,37 +225,70 @@ class Three extends Component {
       opacity: 0.4,
       vertexColors: THREE.NoColors
     })
-    // material.color = new THREE.Color(0xff0000)
 
-    console.log(material)
-    // material.vertexColors = 0xff0000
+    if (blender) {
+      const manager = new THREE.LoadingManager()
+      manager.onStart = function (url, itemsLoaded, itemsTotal) {
+        console.log('Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.' )
+      }
+      manager.onLoad = function () {
+        console.log('Loading complete!')
+      }
+      manager.onProgress = function (url, itemsLoaded, itemsTotal) {
+        console.log('Loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.' )
+      }
+      manager.onError = function (url) {
+        console.log('There was an error loading ' + url )
+      }
 
-    const fog = new THREE.Fog(0xff0000, 0, 500)
+      const blenderLoader = new THREE.OBJLoader(manager)
+      blenderLoader.load('static/assets/torus2.obj', object => {
+        object.scale.multiplyScalar(0.2)
 
-    const count = 2000
-    const scale = 5
+        const count = 1000
+        const scale = 5
 
-    for (var i = 0; i < count; i++) {
-      const r = Math.random() * 2.0 * Math.PI
-      const z = (Math.random() * 2.0) - 1.0
-      const zScale = Math.sqrt(1.0 - z * z) * scale
+        for (var i = 0; i < count; i++) {
+          const r = Math.random() * 2.0 * Math.PI
+          const z = (Math.random() * 2.0) - 1.0
+          const zScale = Math.sqrt(1.0 - z * z) * scale
 
-      const x = Math.cos(r) * zScale * Math.random() * (w / 50)
-      const y = Math.sin(r) * zScale * Math.random() * (h / 50)
+          const x = Math.cos(r) * zScale * Math.random() * (w / 50)
+          const y = Math.sin(r) * zScale * Math.random() * (h / 50)
 
-      const mesh = new THREE.Mesh(geometry, material)
-      mesh.position.set(
-        x,
-        y,
-        z * scale
-      )
-      // const oldX = Math.cos(r) * zScale
-      // const oldY = Math.sin(r) * zScale
-      // console.log({ r, z, zScale, x, y, oldX, oldY })
-      mesh.rotation.set(Math.random(), Math.random(), Math.random())
-      this.scene.add(mesh)
-      this.scene.fog = fog
-      this.scene.background = new THREE.Color(0xe50000)
+          const mesh = new THREE.Mesh(object.children[0].geometry, material)
+
+          mesh.position.set(x, y, z * scale)
+
+          mesh.rotation.set(Math.random(), Math.random(), Math.random())
+          this.scene.add(mesh)
+
+          // this.scene.fog = fog
+          this.scene.background = new THREE.Color(0xe50000)
+        }
+      })
+    } else {
+      const count = 2000
+      const scale = 5
+
+      for (var i = 0; i < count; i++) {
+        const r = Math.random() * 2.0 * Math.PI
+        const z = (Math.random() * 2.0) - 1.0
+        const zScale = Math.sqrt(1.0 - z * z) * scale
+
+        const x = Math.cos(r) * zScale * Math.random() * (w / 50)
+        const y = Math.sin(r) * zScale * Math.random() * (h / 50)
+
+        const mesh = new THREE.Mesh(geometry, material)
+        
+        mesh.position.set(x, y, z * scale)
+
+        mesh.rotation.set(Math.random(), Math.random(), Math.random())
+        this.scene.add(mesh)
+
+        // this.scene.fog = fog
+        this.scene.background = new THREE.Color(0xe50000)
+      }
     }
   }
 
@@ -275,12 +310,29 @@ class Three extends Component {
 
     if (!this.varsNeedUpdate()) {
       this.start()
+      this.rotateToruses()
       this.renderer.render(this.scene, this.camera, this.target)
       this.renderer.render(this.postScene, this.postCamera)
+      // console.log(this.scene)
     }
   }
 
-  start () { if (!this.frameId) { raf(this.renderThree) } }
+  rotateToruses () {
+    this.scene.children.forEach(mesh => {
+      const random = fl => { return Math.random() * fl }
+      // mesh.rotation.x -= random(0.008)
+      // mesh.rotation.y -= random(0.004)
+      // mesh.rotation.z -= random(0.012)
+      mesh.rotation.x -= Math.random() * 0.008
+      mesh.rotation.y -= Math.random() * 0.004
+      mesh.rotation.z -= Math.random() * 0.012
+    })
+  }
+
+  start () { 
+    if (!this.frameId) { raf(this.renderThree) }
+    // setTimeout(() => { this.renderThree() }, 2000)
+  }
   stop () { raf.cancel(this.frameId) }
 
   render () {
@@ -289,7 +341,7 @@ class Three extends Component {
       <div >
         { this.state.supportsExtension
           ? <div>
-            <div /* onWheel={this.handleWheel} */ style={{ width: w, height: h, filter: 'blur(0)', opacity: this.state.opacity }}
+            <div /* onWheel={this.handleWheel} */ style={{ width: w, height: h, filter: 'blur(2px)', opacity: this.state.opacity }}
               ref={ref => { this.mount = ref }} />
             {/* ? <canvas width={w} height={h} ref={ref => { this.canvas = ref }} /> */}
           </div>
