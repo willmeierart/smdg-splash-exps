@@ -1,5 +1,4 @@
 import React, { Component } from 'react'
-import DOM from 'react-dom'
 import PropTypes from 'prop-types'
 import raf from 'raf'
 import * as THREE from 'three'

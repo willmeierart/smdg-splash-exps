@@ -1,6 +1,5 @@
 import React, { Component } from 'react'
 import App from '../containers/App'
-import Canvas from '../components/canvas/Canvas'
 import Three from '../components/three/Three'
 import { binder } from '../lib/_utils'
 
@@ -38,7 +37,6 @@ export default class HomePage extends Component {
     return (
       <App title='Home'>
         <div className='canvas-wrapper'>
-          { this.state.component === 'canvas' && <Canvas w={this.state.width || 0} h={this.state.height || 0} /> }
           { this.state.component === 'three' && <Three w={this.state.width || 0} h={this.state.height || 0} server={this.state.server} /> }
         </div>
         <style jsx>{`
