@@ -22,6 +22,8 @@ export default class App extends Component {
             padding: 0; 
             width: 100vw;
             height: 100vh;
+            position: fixed;
+            overflow: hidden;
            }
         `}</style>
         {/* <style dangerouslySetInnerHTML={{ __html: globalStyles }} /> */}

@@ -39,12 +39,19 @@ class Three extends Component {
     } else {
       // console.log(e.wheelDelta) // works all the time
       if (this.state.incrementWheel) {
-        this.setState({
-          wheelIncrement: e.wheelDelta,
-          opacity: this.state.opacity -= e.wheelDelta / 1000
-        })
-        console.log(this.state.opacity)
-        this.forceUpdate()
+        if (this.state.opacity <= 1) {
+          this.setState({
+            wheelIncrement: e.wheelDelta,
+            opacity: this.state.opacity += e.wheelDelta / 1000
+          })
+          console.log(this.state.opacity)
+          this.forceUpdate()
+          if (this.state.opacity < 0) {
+            window.location.reload()
+          }
+        } else {
+          this.setState({ opacity: 1 })
+        }
       }
     }
   }
@@ -73,6 +80,7 @@ class Three extends Component {
       this.controls.autoRotateSpeed = 20
       if (rotY <= -1.5) {
         this.controls.autoRotate = false
+        this.controls.enableZoom = false
         camera.up.y += 1
         this.setState({ incrementWheel: true })
         console.log('state wheel inc', this.state.wheelIncrement)
@@ -125,8 +133,9 @@ class Three extends Component {
     this.controls.enableDamping = true
     this.controls.dampingFactor = 0.8
     this.controls.rotateSpeed = 0.35
-    this.controls.maxZoom = 55
-    this.controls.zoomSpeed = 1
+    // this.controls.minZoom = 55
+    this.controls.maxDistance = 55
+    this.controls.zoomSpeed = -1
     this.controls.minDistance = 7
     this.controls.addEventListener('change', this.handleWheel)
 
@@ -338,10 +347,10 @@ class Three extends Component {
   render () {
     const { w, h } = this.props
     return (
-      <div >
+      <div style={{ backgroundColor: '#ff0000', width: '100vw', height: '100vh', position: 'fixed' }} >
         { this.state.supportsExtension
           ? <div>
-            <div /* onWheel={this.handleWheel} */ style={{ width: w, height: h, filter: 'blur(2px)', opacity: this.state.opacity }}
+            <div /* onWheel={this.handleWheel} */ style={{ width: w, height: h, filter: 'blur(2px)', opacity: this.state.opacity, position: 'fixed' }}
               ref={ref => { this.mount = ref }} />
             {/* ? <canvas width={w} height={h} ref={ref => { this.canvas = ref }} /> */}
           </div>
