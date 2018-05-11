@@ -27,13 +27,16 @@ class Three extends Component {
     return false
   }
 
-  componentDidMount () { this.setupThree() }
+  componentDidMount () {
+    console.log('infinite loop sketch... BREAK THE BLOOD BRAIN BARRIER!')
+    this.setupThree()
+  }
   componentDidUpdate () { this.setupThree() }
   componentWillUnmount () { this.stop() }
 
   handleWheel (e) {
     if (e.target.object !== undefined) {
-      console.log(e.target.object)
+      // console.log(e.target.object)
       this.manipulateControls(e)
     } else {
       // console.log(e.wheelDelta) // works all the time
@@ -43,7 +46,7 @@ class Three extends Component {
             wheelIncrement: e.wheelDelta,
             opacity: this.state.opacity += e.wheelDelta / 1000
           })
-          console.log(this.state.opacity)
+          // console.log(this.state.opacity)
           this.forceUpdate()
           if (this.state.opacity < 0) {
             window.location.reload()
@@ -63,12 +66,12 @@ class Three extends Component {
     // then switch mousebutton 0 to 'rotate' then if rotate hits 90
     // ... prob have to change some stuff to negative vals, etc
     // switch mousebutton 0 to pan then when pan pans left a certain amount ...
-    console.log(z)
-    console.log(rotY)
-    console.log(90 * Math.PI / 180)
+    // console.log(z)
+    // console.log(rotY)
+    // console.log(90 * Math.PI / 180)
 
     if (Math.abs(z) <= 7) {
-      console.log('in wall')
+      // console.log('in wall')
       // console.log(e.wheelDelta);
       this.controls.mouseButtons = {
         ORBIT: THREE.MOUSE.MIDDLE,
@@ -138,7 +141,7 @@ class Three extends Component {
     this.controls.minDistance = 7
     this.controls.addEventListener('change', this.handleWheel)
 
-    console.log(this.controls)
+    // console.log(this.controls)
 
     this.target = new THREE.WebGLRenderTarget(w, h)
     this.target.texture.format = THREE.RGBFormat
@@ -215,7 +218,7 @@ class Three extends Component {
 
     postMaterial.fog = true
     // const fog = new THREE.Fog(0xff0000)
-    console.log(postMaterial)
+    // console.log(postMaterial)
 
     const postPlane = new THREE.PlaneBufferGeometry(2, 2)
     const postQuad = new THREE.Mesh(postPlane, postMaterial)
