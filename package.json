@@ -7,7 +7,7 @@
     "dev": "next",
     "build": "next build",
     "heroku-postbuild": "next build",
-    "start": "NODE_ENV=production next"
+    "start": "NODE_ENV=production next start"
   },
   "jest": {
     "setupFiles": [
