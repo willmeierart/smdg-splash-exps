@@ -4,10 +4,11 @@
   "description": "using next.js and apollo",
   "scripts": {
     "test": "jest",
-    "dev": "next",
+    "dev": "NODE_ENV=development node server/index.js",
+    "next": "next",
     "build": "next build",
     "heroku-postbuild": "next build",
-    "start": "NODE_ENV=production next start"
+    "start": "NODE_ENV=production node server/index.js"
   },
   "jest": {
     "setupFiles": [
