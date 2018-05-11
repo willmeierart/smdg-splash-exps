@@ -13,7 +13,7 @@ export default (props = initialProps) => {
     <meta key='charset' charSet='utf-8' />
     <meta key='viewport' name='viewport' content={`initial-scale=${initialScale || initialProps.initialScale}, width=device-width, shrink-to-fit=no`} />
     <meta key='meta-title' name='title' content='Agency Zero' />
-    <link rel='shortcut icon' href='/static/favicon.ico' />
+    {/* <link rel='shortcut icon' href='/static/favicon.ico' /> */}
     {/* <script id="post-vert" type="x-shader/x-vertex">
         varying vec2 vUv;
         void main() {
